@@ -1,1 +1,1 @@
-# MLP-RecurrentNetworks-
+# MLP-Recurrent-NN

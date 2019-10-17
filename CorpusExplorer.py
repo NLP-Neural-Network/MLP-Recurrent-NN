@@ -16,6 +16,7 @@ from collections import defaultdict, Counter
 # for fileid in nltk.corpus.webtext.fileids():
 #          print(webtext.raw(fileid)[:25], '...')
 #
+<<<<<<< HEAD
 
 
 #preprocessing method that wont add questions, imperfect tho
@@ -36,6 +37,17 @@ def parse_Questions(corpus):
 lol = parse_Questions(brown)
 
 
+=======
+counter = 0
+sentance_num = 0
+len(brown.words(categories=['news']))
+for x in brown.words(categories=['news']):
+    if x == '?':
+        counter = counter + 1
+    if x == '.' or x =='?':
+        sentance_num = sentance_num + 1
+counter
+>>>>>>> 8cdf687d8f33896fffb84900823f935f4a054c05
 
 
 # Keeps words and pos into a dictionary
@@ -47,7 +59,11 @@ word_tags = defaultdict(Counter)
 def build_dataset(words, n_words):
  count = [['UNK', -1]]
  count.extend(collections.Counter(words).most_common(n_words - 1))
+<<<<<<< HEAD
  dictionary = dict
+=======
+ dictionary = dict()
+>>>>>>> 8cdf687d8f33896fffb84900823f935f4a054c05
  for word, _ in count:
      dictionary[word] = len(dictionary)
      data = list()

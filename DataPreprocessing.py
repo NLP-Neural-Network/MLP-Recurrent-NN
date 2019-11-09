@@ -35,6 +35,51 @@ def parse_Questions(corpus):
                 count = count + 1
     return Vocab_v0
 
+#Method that receives list of tagged sentences and iterates through them to pass them into a dictionary.
+#Brown_mapping and tree_mapping equals the map of sentences:tags
+def getCorpusTags(brownT, treeT):
+    for sent, sent1 in zip(brownT, treeT):
+        sentence = []
+        sentence1 = []
+        tags = []
+        tags1 = []
+        for word, word1 in zip(sent, sent1):
+            sentence.append(word[0])
+            sentence1.append(word1[0])
+            tags.append(word[1])
+            tags1.append(word1[1])
+
+        brown_mapping[str(sentence)] = str(tags)
+        tree_mapping[str(sentence1)] = str(tags1)
+
+
+# Iterates through the values(sentences), to iterate through the words and save them into xList
+# Saves xList in xMatrix, making it a list of lists (transforming the corpus to vectors)
+#Checks if the sentence in vocab is the dictionary. Afterwards, it get the value which are
+#the respective tags and saves them in yMatrix(labels)
+def xySegmentation():
+    # Array to save the lists produced on the next for loop
+    # xMatrix are the features and yMatrix are the labels
+    xMatrix = []
+    yMatrix = []
+    for i in Vocab_v0.values():
+        hashable_i = str(i)
+        if hashable_i in brown_mapping:
+            yMatrix.append(brown_mapping[hashable_i])
+        elif hashable_i in tree_mapping:
+            yMatrix.append(tree_mapping[hashable_i])
+
+        xList = []
+        for j in i:
+            if j in model.wv.vocab:
+                xList.append(model.wv.get_vector(j))
+                xMatrix.append(xList)
+
+    xMatrix = np.array(xMatrix)
+    yMatrix = np.array(yMatrix)
+
+    return xMatrix, yMatrix
+
 
 parse_Questions(brown)
 parse_Questions(treebank)
@@ -61,38 +106,10 @@ model = Word2Vec.load('newmodel')
 
 data_set = []
 
-# Array to save the lists produced on the next for loop
-# xMatrix are the features and yMatrix are the labels
-xMatrix = []
-yMatrix = []
-
 padded_inputs = tf.keras.preprocessing.sequence.pad_sequences(model.wv.vectors, padding='post')
-print(padded_inputs)
 brownTags = list(brown.tagged_sents())
 treeTags = list(treebank.tagged_sents())
-
-# Iterates through the values(sentences), to iterate through the words and save them into xList
-# Saves xList in xMatrix, making it a list of lists (transforming the corpus to vectors)
-for i in Vocab_v0.values():
-    yList = []
-    if i in brownTags:
-        for tag in brownTags[brownTags.index(i)]:
-            yList.append(tag)
-            yMatrix.append(yList)
-    elif i in treeTags:
-        for tag in treeTags[treeTags.index(i)]:
-            yList.append(tag)
-            yMatrix.append(yList)
-
-    xList = []
-    for j in i:
-        print(j)
-        if j in model.wv.vocab:
-            print(model.wv.get_vector(j))
-            xList.append(model.wv.get_vector(j))
-            xMatrix.append(xList)
-
-xMatrix = np.array(xMatrix)
-yMatrix = np.array(yMatrix)
-
-print(xMatrix[1], yMatrix[1])
+brown_mapping = {}
+tree_mapping = {}
+getCorpusTags(brownTags, treeTags)
+xySegmentation()

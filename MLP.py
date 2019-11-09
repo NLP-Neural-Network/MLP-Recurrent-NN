@@ -13,7 +13,7 @@ tags = set([tag for sentence in treebank.tagged_sents() for _, tag in sentence])
 
 #Training and testing data separation
 training_data = sentences[:int(.80 * len(sentences))]
-testing_data = sentences[int(.80 * len(sentences)):]
+testing_data = sentences[int(.20 * len(sentences)):]
 
 c = len(training_data) - 1
 features = []

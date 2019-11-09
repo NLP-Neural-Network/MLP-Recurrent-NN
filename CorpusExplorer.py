@@ -2,20 +2,22 @@ import nltk
 from nltk.corpus import gutenberg
 from nltk.corpus import webtext
 from nltk.corpus import brown
+from nltk.corpus import reuters
 from collections import defaultdict, Counter
+from nltk import corpus
+import spacy
+from spacy.tokenizer import Tokenizer
+from spacy.lang.en import English
+
+
 # RECOMIENDO QUE USEN UN JUPYTER NOTEBOOK PARA PODER CORRER PEDAZO A PEDAZO Y EXPLORAR LOS CORPUS, EL BUILD DATA SET METHOD ES EL QUE ESTABA EN EL LIBRO QUE ADEL NOS MANDO
 
+nltk.download('brown')
+nltk.download('gutenberg')
+nltk.download('reuters')
 
-# for fileid in gutenberg.fileids():
-#      num_chars = len(gutenberg.raw(fileid))
-#      num_words = len(gutenberg.words(fileid))
-#      num_sents = len(gutenberg.sents(fileid))
-#      num_vocab = len(set(w.lower() for w in gutenberg.words(fileid)))
-#      print(round(num_chars/num_words), round(num_words/num_sents), round(num_words/num_vocab), fileid)
-#
-# for fileid in nltk.corpus.webtext.fileids():
-#          print(webtext.raw(fileid)[:25], '...')
-#
+nlp = spacy.load('brown')
+print(nlp)
 
 
 #preprocessing method that wont add questions, imperfect tho
@@ -24,13 +26,21 @@ def parse_Questions(corpus):
     counter = 0
     sentance_num = 0
 
+    #nlp.tokenizer.pipe(brown, gutenberg, reuters)
+
+
+    doc = nlp.tokenizer.pipe(brown, gutenberg, reuters)
     Vocab_v0 = dict()
     count = 0
-    for sentance in corpus.sents(categories=['news']):
-        for items in sentance :
-            if items == '.':
-                Vocab_v0[count] = sentance
-                count = count + 1
+
+
+    for sent in doc.sents:
+        if '?' not in sent & '!' not in sent:
+            Vocab_v0[count] = sent
+            count = count + 1
+
+
+    print(count)
     return Vocab_v0
 
 lol = parse_Questions(brown)

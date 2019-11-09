@@ -8,7 +8,7 @@ Original file is located at
 """
 
 import nltk
-from nltk.corpus import brown, gutenberg, reuters, treebank
+from nltk.corpus import brown, treebank
 from collections import defaultdict, Counter
 from gensim.models.word2vec import Word2Vec
 from multiprocessing import cpu_count
@@ -22,21 +22,38 @@ nltk.download('punkt')
 
 """CODIGO DE GUILLERMO"""
 
-Vocab_v0 = dict()
 
 def parse_Questions(corpus):
-    counter = 0
-    sentence_num = 0
     count = 0
     for sentence in corpus.sents():
         for items in sentence:
             if items == '.' and (items != '?' or '!' or 'if'):
-                Vocab_v0[count] = sentence
+                vocab_v0[count] = sentence
                 count = count + 1
-    return Vocab_v0
+    return vocab_v0
 
-#Method that receives list of tagged sentences and iterates through them to pass them into a dictionary.
-#Brown_mapping and tree_mapping equals the map of sentences:tags
+def wordEmbedding(vocab):
+    # Download dataset
+    dataset = [vocab[s] for s in vocab]
+    data = [d for d in dataset]
+
+    # Split the data into 2 parts. Part 2 will be used later to update the model
+    data_part1 = data[:1000]
+    data_part2 = data[1000:]
+
+    # Train Word2Vec model. Defaults result vector size = 100
+    model = Word2Vec(data_part1, min_count=0, workers=cpu_count())
+
+    # Save and Load Model
+    model.save('newmodel')
+    model = Word2Vec.load('newmodel')
+
+    return model
+
+
+
+# Method that receives list of tagged sentences and iterates through them to pass them into a dictionary.
+# Brown_mapping and tree_mapping equals the map of sentences:tags
 def getCorpusTags(brownT, treeT):
     for sent, sent1 in zip(brownT, treeT):
         sentence = []
@@ -55,14 +72,14 @@ def getCorpusTags(brownT, treeT):
 
 # Iterates through the values(sentences), to iterate through the words and save them into xList
 # Saves xList in xMatrix, making it a list of lists (transforming the corpus to vectors)
-#Checks if the sentence in vocab is the dictionary. Afterwards, it get the value which are
-#the respective tags and saves them in yMatrix(labels)
+# Checks if the sentence in vocab is the dictionary. Afterwards, it get the value which are
+# the respective tags and saves them in yMatrix(labels)
 def xySegmentation():
     # Array to save the lists produced on the next for loop
     # xMatrix are the features and yMatrix are the labels
     xMatrix = []
     yMatrix = []
-    for i in Vocab_v0.values():
+    for i in vocab_v0.values():
         hashable_i = str(i)
         if hashable_i in brown_mapping:
             yMatrix.append(brown_mapping[hashable_i])
@@ -71,45 +88,28 @@ def xySegmentation():
 
         xList = []
         for j in i:
-            if j in model.wv.vocab:
-                xList.append(model.wv.get_vector(j))
+            if j in embedding.wv.vocab:
+                xList.append(embedding.wv.get_vector(j))
                 xMatrix.append(xList)
 
     xMatrix = np.array(xMatrix)
     yMatrix = np.array(yMatrix)
-
     return xMatrix, yMatrix
 
 
+vocab_v0 = dict()
 parse_Questions(brown)
 parse_Questions(treebank)
-
-"""FIN DE CODIGO DE GUILLERMO"""
-
-"""CODIGO DE GENSIM TUTORIAL SOBRE WORD2VEC"""
-# Download dataset
-dataset = [Vocab_v0[s] for s in Vocab_v0]
-data = [d for d in dataset]
-
-# Split the data into 2 parts. Part 2 will be used later to update the model
-data_part1 = data[:1000]
-data_part2 = data[1000:]
-
-# Train Word2Vec model. Defaults result vector size = 100
-model = Word2Vec(data_part1, min_count=0, workers=cpu_count())
-
-# Save and Load Model
-model.save('newmodel')
-model = Word2Vec.load('newmodel')
-
-# Padding Vectorized Data Set
-
-data_set = []
-
-padded_inputs = tf.keras.preprocessing.sequence.pad_sequences(model.wv.vectors, padding='post')
+embedding = wordEmbedding(vocab_v0)
 brownTags = list(brown.tagged_sents())
 treeTags = list(treebank.tagged_sents())
 brown_mapping = {}
 tree_mapping = {}
 getCorpusTags(brownTags, treeTags)
 xySegmentation()
+
+
+# Padding Vectorized Data Set
+padded_inputs = tf.keras.preprocessing.sequence.pad_sequences(embedding.wv.vectors, padding='post')
+
+

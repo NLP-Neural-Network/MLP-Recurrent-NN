@@ -15,6 +15,7 @@ from multiprocessing import cpu_count
 import gensim.downloader as api
 import tensorflow as tf
 import numpy as np
+from tensorflow.keras.utils import to_categorical
 
 nltk.download('brown')
 nltk.download('treebank')
@@ -31,6 +32,7 @@ def parse_Questions(corpus):
                 vocab_v0[count] = sentence
                 count = count + 1
     return vocab_v0
+
 
 def wordEmbedding(vocab):
     # Download dataset
@@ -51,10 +53,19 @@ def wordEmbedding(vocab):
     return model
 
 
-
 # Method that receives list of tagged sentences and iterates through them to pass them into a dictionary.
 # Brown_mapping and tree_mapping equals the map of sentences:tags
 def getCorpusTags(brownT, treeT):
+    # Set union of tags
+    all_tags = set([tag for sentence in treebank.tagged_sents(tagset='universal') for _, tag in sentence])\
+        .union([tag for sentence in brown.tagged_sents(tagset='universal') for _, tag in sentence])
+
+    # Iterate through all the tags to do an int mapping
+    c = 0
+    for tag in all_tags:
+        tag_mapping[tag] = c
+        c += 1
+
     for sent, sent1 in zip(brownT, treeT):
         sentence = []
         sentence1 = []
@@ -63,11 +74,11 @@ def getCorpusTags(brownT, treeT):
         for word, word1 in zip(sent, sent1):
             sentence.append(word[0])
             sentence1.append(word1[0])
-            tags.append(word[1])
-            tags1.append(word1[1])
+            tags.append(tag_mapping[word[1]])
+            tags1.append(tag_mapping[word1[1]])
 
         brown_mapping[str(sentence)] = str(tags)
-        tree_mapping[str(sentence1)] = str(tags1)
+        tree_mapping[str(sentence1)] = tags1
 
 
 # Iterates through the values(sentences), to iterate through the words and save them into xList
@@ -80,20 +91,23 @@ def xySegmentation():
     xMatrix = []
     yMatrix = []
     for i in vocab_v0.values():
+        tagged_sentence = []
+        xList = []
         hashable_i = str(i)
         if hashable_i in brown_mapping:
             yMatrix.append(brown_mapping[hashable_i])
         elif hashable_i in tree_mapping:
             yMatrix.append(tree_mapping[hashable_i])
 
-        xList = []
         for j in i:
             if j in embedding.wv.vocab:
                 xList.append(embedding.wv.get_vector(j))
-                xMatrix.append(xList)
+
+        xMatrix.append(xList)
 
     xMatrix = np.array(xMatrix)
     yMatrix = np.array(yMatrix)
+
     return xMatrix, yMatrix
 
 
@@ -101,15 +115,17 @@ vocab_v0 = dict()
 parse_Questions(brown)
 parse_Questions(treebank)
 embedding = wordEmbedding(vocab_v0)
-brownTags = list(brown.tagged_sents())
-treeTags = list(treebank.tagged_sents())
+brownTags = list(brown.tagged_sents(tagset='universal'))
+treeTags = list(treebank.tagged_sents(tagset='universal'))
 brown_mapping = {}
 tree_mapping = {}
+tag_mapping = {}
 getCorpusTags(brownTags, treeTags)
-xySegmentation()
+xTrain, yTrain = xySegmentation()
 
+yTrain = to_categorical(yTrain)
+xTrain = xTrain[len(xTrain) * .80]
+xTest = xTrain[len(xTrain) * .20]
 
 # Padding Vectorized Data Set
-padded_inputs = tf.keras.preprocessing.sequence.pad_sequences(embedding.wv.vectors, padding='post')
-
-
+padded_inputs = tf.keras.preprocessing.sequence.pad_sequences(xTrain, padding='post')

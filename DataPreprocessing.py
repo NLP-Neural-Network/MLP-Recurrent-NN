@@ -16,6 +16,8 @@ import gensim.downloader as api
 import tensorflow as tf
 import numpy as np
 from tensorflow.keras.utils import to_categorical
+from tensorflow.keras import models, layers
+import matplotlib.pyplot as plt
 
 nltk.download('brown')
 nltk.download('treebank')
@@ -55,10 +57,12 @@ def wordEmbedding(vocab):
 
 # Method that receives list of tagged sentences and iterates through them to pass them into a dictionary.
 # Brown_mapping and tree_mapping equals the map of sentences:tags
-def getCorpusTags(brownT, treeT):
+def getCorpusTags(tagged_corpus):
     # Set union of tags
     all_tags = set([tag for sentence in treebank.tagged_sents(tagset='universal') for _, tag in sentence]) \
         .union([tag for sentence in brown.tagged_sents(tagset='universal') for _, tag in sentence])
+
+    transformed_vocab = {}
 
     # Iterate through all the tags to do an int mapping
     c = 0
@@ -66,19 +70,18 @@ def getCorpusTags(brownT, treeT):
         tag_mapping[tag] = c
         c += 1
 
-    for sent, sent1 in zip(brownT, treeT):
+    for sent in tagged_corpus:
         sentence = []
-        sentence1 = []
         tags = []
         tags1 = []
-        for word, word1 in zip(sent, sent1):
+        for word in sent:
             sentence.append(word[0])
-            sentence1.append(word1[0])
             tags.append(tag_mapping[word[1]])
-            tags1.append(tag_mapping[word1[1]])
 
-        brown_mapping[str(sentence)] = str(tags)
-        tree_mapping[str(sentence1)] = tags1
+        if sentence in vocab_v0.values():
+            transformed_vocab[str(sentence)] = tags
+
+    return transformed_vocab
 
 
 # Iterates through the values(sentences), to iterate through the words and save them into xList
@@ -90,25 +93,19 @@ def xySegmentation():
     # xMatrix are the features and yMatrix are the labels
     xMatrix = []
     yMatrix = []
-    for i in vocab_v0.values():
-        tagged_sentence = []
+    for sentence, tag in zip(vocab_v0.keys(), vocab_v0.values()):
         xList = []
-        hashable_i = str(i)
-        if hashable_i in brown_mapping:
-            yMatrix.append(brown_mapping[hashable_i])
-        elif hashable_i in tree_mapping:
-            yMatrix.append(tree_mapping[hashable_i])
-
-        for j in i:
-            if j in embedding.wv.vocab:
-                xList.append(embedding.wv.get_vector(j))
-
+        yMatrix.append(tag)
+        for word in sentence:
+            if word in embedding.wv.vocab:
+                xList.append(embedding.wv.get_vector(word))
         xMatrix.append(xList)
 
     xMatrix = np.array(xMatrix)
     yMatrix = np.array(yMatrix)
 
     return xMatrix, yMatrix
+
 
 # Function that takes the labels variables with integers and iterates through  to
 # hot encode them and return the transformed data
@@ -117,7 +114,7 @@ def labelEncoder(train, test):
     one_hot_test = [[]]
     c = 0
     for train_list, test_list in zip(train, test):
-        one_hot_train.append([to_categorical(train_int) for train_int in train_list if train_int is int ])
+        one_hot_train.append([to_categorical(train_int) for train_int in train_list if train_int is int])
         one_hot_test.append([to_categorical(test_int) for test_int in test_list if test_int is int])
         c += 1
 
@@ -130,11 +127,10 @@ parse_Questions(treebank)
 embedding = wordEmbedding(vocab_v0)
 brownTags = list(brown.tagged_sents(tagset='universal'))
 treeTags = list(treebank.tagged_sents(tagset='universal'))
-brown_mapping = {}
-tree_mapping = {}
 tag_mapping = {}
-getCorpusTags(brownTags, treeTags)
+vocab_v0 = dict(**getCorpusTags(brownTags), **getCorpusTags(treeTags))
 xTrain, yTrain = xySegmentation()
+print(xTrain.size, yTrain.size)
 
 # Data Partition
 x_train = xTrain[int(len(xTrain) * .80):]
@@ -142,9 +138,29 @@ x_test = xTrain[:int(len(xTrain) * .20)]
 y_train = yTrain[int(len(yTrain) * .80):]
 y_test = yTrain[:int(len(xTrain) * .20)]
 
-
 y_train, y_test = labelEncoder(y_train, y_test)
 
 print(len(y_train))
 # Padding Vectorized Data Set
 padded_inputs = tf.keras.preprocessing.sequence.pad_sequences(x_train, padding='post')
+
+model = models.Sequential()
+model.add(layers.Dense(16, activation='relu', input_shape=(1,)))
+# model.add(layers.LSTM(16, activation='relu'))
+model.add(layers.Dense(16, activation='relu'))
+model.add(layers.Dense(11, activation='softmax'))
+
+model.compile(optimizer='rmsprop', loss='categorical_crossentropy', matrics=['accuracy'])
+
+history = model.fit(x_train, y_train, epochs=20, batch_size=512, validation_data=(x_test, y_test))
+
+loss = history.history['loss']
+val_loss = history.history['val_loss']
+
+epochs = range(1, len(loss) + 1)
+plt.plot(epochs, loss, 'bo', label='Training Loss')
+plt.plot(epochs, val_loss, 'b', label='Validation loss')
+plt.title('Training and validation loss')
+plt.xlabel('Epochs')
+plt.ylabel('Loss')
+plt.legend()

@@ -57,7 +57,7 @@ def wordEmbedding(vocab):
 # Brown_mapping and tree_mapping equals the map of sentences:tags
 def getCorpusTags(brownT, treeT):
     # Set union of tags
-    all_tags = set([tag for sentence in treebank.tagged_sents(tagset='universal') for _, tag in sentence])\
+    all_tags = set([tag for sentence in treebank.tagged_sents(tagset='universal') for _, tag in sentence]) \
         .union([tag for sentence in brown.tagged_sents(tagset='universal') for _, tag in sentence])
 
     # Iterate through all the tags to do an int mapping
@@ -110,6 +110,19 @@ def xySegmentation():
 
     return xMatrix, yMatrix
 
+# Function that takes the labels variables with integers and iterates through  to
+# hot encode them and return the transformed data
+def labelEncoder(train, test):
+    one_hot_train = [[]]
+    one_hot_test = [[]]
+    c = 0
+    for train_list, test_list in zip(train, test):
+        one_hot_train.append([to_categorical(train_int) for train_int in train_list if train_int is int ])
+        one_hot_test.append([to_categorical(test_int) for test_int in test_list if test_int is int])
+        c += 1
+
+    return np.array(one_hot_train), np.array(one_hot_test)
+
 
 vocab_v0 = dict()
 parse_Questions(brown)
@@ -123,9 +136,15 @@ tag_mapping = {}
 getCorpusTags(brownTags, treeTags)
 xTrain, yTrain = xySegmentation()
 
-yTrain = to_categorical(yTrain)
-xTrain = xTrain[len(xTrain) * .80]
-xTest = xTrain[len(xTrain) * .20]
+# Data Partition
+x_train = xTrain[int(len(xTrain) * .80):]
+x_test = xTrain[:int(len(xTrain) * .20)]
+y_train = yTrain[int(len(yTrain) * .80):]
+y_test = yTrain[:int(len(xTrain) * .20)]
 
+
+y_train, y_test = labelEncoder(y_train, y_test)
+
+print(len(y_train))
 # Padding Vectorized Data Set
-padded_inputs = tf.keras.preprocessing.sequence.pad_sequences(xTrain, padding='post')
+padded_inputs = tf.keras.preprocessing.sequence.pad_sequences(x_train, padding='post')

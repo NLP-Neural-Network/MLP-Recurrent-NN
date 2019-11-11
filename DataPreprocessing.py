@@ -23,8 +23,6 @@ nltk.download('brown')
 nltk.download('treebank')
 nltk.download('punkt')
 
-"""CODIGO DE GUILLERMO"""
-
 
 def parse_Questions(corpus):
     count = 0
@@ -58,22 +56,10 @@ def wordEmbedding(vocab):
 # Method that receives list of tagged sentences and iterates through them to pass them into a dictionary.
 # Brown_mapping and tree_mapping equals the map of sentences:tags
 def getCorpusTags(tagged_corpus):
-    # Set union of tags
-    all_tags = set([tag for sentence in treebank.tagged_sents(tagset='universal') for _, tag in sentence]) \
-        .union([tag for sentence in brown.tagged_sents(tagset='universal') for _, tag in sentence])
-
     transformed_vocab = {}
-
-    # Iterate through all the tags to do an int mapping
-    c = 0
-    for tag in all_tags:
-        tag_mapping[tag] = c
-        c += 1
-
     for sent in tagged_corpus:
         sentence = []
         tags = []
-        tags1 = []
         for word in sent:
             sentence.append(word[0])
             tags.append(tag_mapping[word[1]])
@@ -109,16 +95,26 @@ def xySegmentation():
 
 # Function that takes the labels variables with integers and iterates through  to
 # hot encode them and return the transformed data
-def labelEncoder(train, test):
-    one_hot_train = [[]]
-    one_hot_test = [[]]
+def labelEncoder():
+    # Set union of tags
+    all_tags = set([tag for sentence in treebank.tagged_sents(tagset='universal') for _, tag in sentence]) \
+        .union([tag for sentence in brown.tagged_sents(tagset='universal') for _, tag in sentence])
+
+    # Iterate through all the tags to do an int mapping
     c = 0
-    for train_list, test_list in zip(train, test):
-        one_hot_train.append([to_categorical(train_int) for train_int in train_list if train_int is int])
-        one_hot_test.append([to_categorical(test_int) for test_int in test_list if test_int is int])
+    for tag in all_tags:
+        tag_mapping[tag] = c
         c += 1
 
-    return np.array(one_hot_train), np.array(one_hot_test)
+    one_hot_labels = to_categorical([0,1,2,3,4,5,6,7,8,9,10,11], num_classes=12)
+    keys = list(tag_mapping.keys())
+    c = 0
+    for value in tag_mapping.values():
+        tag_mapping[keys[c]] = one_hot_labels[value]
+        c += 1
+
+
+
 
 
 vocab_v0 = dict()
@@ -128,27 +124,30 @@ embedding = wordEmbedding(vocab_v0)
 brownTags = list(brown.tagged_sents(tagset='universal'))
 treeTags = list(treebank.tagged_sents(tagset='universal'))
 tag_mapping = {}
+labelEncoder()
 vocab_v0 = dict(**getCorpusTags(brownTags), **getCorpusTags(treeTags))
 xTrain, yTrain = xySegmentation()
 print(xTrain.size, yTrain.size)
 
 # Data Partition
+xTrain = tf.keras.preprocessing.sequence.pad_sequences(xTrain, padding='post')
+yTrain = tf.keras.preprocessing.sequence.pad_sequences(yTrain, padding='post')
+
 x_train = xTrain[int(len(xTrain) * .80):]
 x_test = xTrain[:int(len(xTrain) * .20)]
 y_train = yTrain[int(len(yTrain) * .80):]
 y_test = yTrain[:int(len(xTrain) * .20)]
 
-y_train, y_test = labelEncoder(y_train, y_test)
 
-print(len(y_train))
+#print(y_test.shape, y_train.shape, y_train.itemsize)
+
 # Padding Vectorized Data Set
-padded_inputs = tf.keras.preprocessing.sequence.pad_sequences(x_train, padding='post')
 
 model = models.Sequential()
 model.add(layers.Dense(16, activation='relu', input_shape=(1,)))
 # model.add(layers.LSTM(16, activation='relu'))
 model.add(layers.Dense(16, activation='relu'))
-model.add(layers.Dense(11, activation='softmax'))
+model.add(layers.Dense(11, activation='softmax', ))
 
 model.compile(optimizer='rmsprop', loss='categorical_crossentropy', matrics=['accuracy'])
 

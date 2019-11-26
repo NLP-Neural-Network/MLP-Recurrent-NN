@@ -1,4 +1,4 @@
-import llist
+from llist import dllist
 import nltk
 from nltk.corpus import brown, treebank
 from collections import defaultdict, Counter
@@ -11,7 +11,7 @@ from tensorflow.keras.utils import to_categorical
 from tensorflow.keras import models, layers
 from tensorflow.keras.layers import LSTM, Dense
 import matplotlib.pyplot as plt
-from tensorflow.keras.preprocessing.sequence import TimeseriesGenerator
+from tensorflow.keras.preprocessing.sequence import TimeseriesGenerat
 
 
 
@@ -78,6 +78,7 @@ class Pre:
         data = [d for d in dataset]
 
         # Split the data into 2 parts. Part 2 will be used later to update the model
+        #quitar//
         data_part1 = data[:1000]
         data_part2 = data[1000:]
 
@@ -93,15 +94,14 @@ class Pre:
     # Method that receives list of tagged sentences and iterates through them to pass them into a dictionary.
     # Brown_mapping and tree_mapping equals the map of sentences:tags
     @staticmethod
-    def getCorpusTags(tagged_corpus,mapping):
+    def getCorpusTags(tagged_corpus):
         transformed_vocab = {}
         for sent in tagged_corpus:
             sentence = []
             tags = []
-
             for word in sent:
                 sentence.append(word[0])
-                tags.append(mapping[word[1]])
+                tags.append(tag_mapping[word[1]])
 
             if sentence in vocab_v0.values():
                 transformed_vocab[str(sentence)] = np.asarray(tags)
@@ -132,21 +132,36 @@ class Pre:
     # Function that takes the labels variables with integers and iterates through  to
     # hot encode them and return the transformed data
     @staticmethod
-    def labelWordEncoder(all , mapping):
-
+    def labelWordEncoder():
+        # Set union of tags
+        all_tags = set([tag for sentence in treebank.tagged_sents(tagset='universal') for _, tag in sentence]) \
+            .union([tag for sentence in brown.tagged_sents(tagset='universal') for _, tag in sentence])
 
         # Iterate through all the tags to do an int mapping
         c = 0
-        for tag in all:
-            mapping[tag] = c
+        for tag in all_tags:
+            tag_mapping[tag] = c
             c += 1
 
         one_hot_labels = to_categorical([0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11], num_classes=12)
-        keys = list(mapping.keys())
+        keys = list(tag_mapping.keys())
         c = 0
-        for value in mapping.values():
-            mapping[keys[c]] = one_hot_labels[value]
+        for value in tag_mapping.values():
+            tag_mapping[keys[c]] = one_hot_labels[value]
             c += 1
+
+    @staticmethod
+    def wordEncoder():
+
+        count = 0
+        for sentence in vocab_v0.values():
+            for word in sentence:
+                if wordVocab[word] == None:
+                    wordVocab[word] = count
+                    count = count + 1
+        return wordVocab
+
+
 
 #/////////////////////////////////////////////////////////////////////////////////////////////////
 # //////////////////////////////////////////////MAIN//////////////////////////////////////////////
@@ -156,23 +171,22 @@ nltk.download('treebank')
 nltk.download('punkt')
 nltk.download('universal_tagset')
 
+
 vocab_v0 = dict()
+wordVocab = dict()
 Pre.parse_Questions(brown)
 Pre.parse_Questions(treebank)
+
+wordVocab= Pre.wordEncoder()
+
 embedding = Pre.wordEmbedding(vocab_v0)
-brownTags = lista(brown.tagged_sents(tagset='universal'))
-treeTags = lista(treebank.tagged_sents(tagset='universal'))
+brownTags = dllist(brown.tagged_sents(tagset='universal'))
+treeTags = dllist(treebank.tagged_sents(tagset='universal'))
 tag_mapping = {}
-
-
-# Set union of tags
-all_tags = set([tag for sentence in treebank.tagged_sents(tagset='universal') for _, tag in sentence]) \
-    .union([tag for sentence in brown.tagged_sents(tagset='universal') for _, tag in sentence])
-
-
-Pre.labelWordEncoder(all_tags,tag_mapping)
-vocab_v0 = dict(**Pre.getCorpusTags(brownTags,tag_mapping), **Pre.getCorpusTags(treeTags,tag_mapping))
+Pre.labelEncoder()
+vocab_v0 = dict(**Pre.getCorpusTags(brownTags), **Pre.getCorpusTags(treeTags))
 xTrain, yTrain = Pre.xySegmentation()
+
 
 x_reduced = xTrain[:8000]
 y_reduced = xTrain[:8000]
@@ -180,9 +194,10 @@ y_reduced = xTrain[:8000]
 x_train = tf.keras.preprocessing.sequence.pad_sequences(x_reduced, padding='post')
 y_train = tf.keras.preprocessing.sequence.pad_sequences(y_reduced, padding='post')
 
+
 data_gen = tf.keras.preprocessing.sequence.TimeseriesGenerator(x_train, y_train,
-                                                               length=10, sampling_rate=20,
-                                                               batch_size=100)
+                               length=10, sampling_rate=20,
+                               batch_size=100)
 # Data Partition
 # Padding Vectorized Data Set
 
@@ -192,10 +207,10 @@ x_test = tf.keras.preprocessing.sequence.pad_sequences(xTrain[:int(len(xTrain) *
 y_train = tf.keras.preprocessing.sequence.pad_sequences(yTrain[int(len(yTrain) * .70):], padding='post')
 y_test = tf.keras.preprocessing.sequence.pad_sequences(yTrain[:int(len(xTrain) * .30)], padding='post')
 
-# print(y_test.shape, y_train.shape, y_train.itemsize)
+#print(y_test.shape, y_train.shape, y_train.itemsize)
 
 model = models.Sequential()
-model.add(layers.Dense(100, activation='relu', input_shape=(48851, 9000,)))
+model.add(layers.Dense(100, activation='relu', input_shape=(48851, 9000, )))
 
 lstm_x = LSTM(100)(x_train)
 # model.add(layers.LSTM(16, activation='relu'))

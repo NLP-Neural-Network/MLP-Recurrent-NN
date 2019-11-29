@@ -42,7 +42,6 @@ with open(os.path.join('/home/adel/Desktop', 'glove.6B.100d.txt')) as f:
         embeddings_index[word] = coefs
 
 print('Found %s word vectors.' % len(embeddings_index))
-
 # second, prepare text samples and their labels
 print('Processing text dataset')
 

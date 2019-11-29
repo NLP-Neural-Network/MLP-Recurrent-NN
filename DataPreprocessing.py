@@ -11,7 +11,7 @@ from tensorflow.keras.utils import to_categorical
 from tensorflow.keras import models, layers
 from tensorflow.keras.layers import LSTM, Dense
 import matplotlib.pyplot as plt
-from tensorflow.keras.preprocessing.sequence import TimeseriesGenerat
+from tensorflow.keras.preprocessing.sequence import TimeseriesGenerator
 
 
 

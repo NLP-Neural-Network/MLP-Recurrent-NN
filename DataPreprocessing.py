@@ -132,7 +132,7 @@ class Pre:
     # Function that takes the labels variables with integers and iterates through  to
     # hot encode them and return the transformed data
     @staticmethod
-    def labelWordEncoder():
+    def labelEncoder():
         # Set union of tags
         all_tags = set([tag for sentence in treebank.tagged_sents(tagset='universal') for _, tag in sentence]) \
             .union([tag for sentence in brown.tagged_sents(tagset='universal') for _, tag in sentence])
@@ -156,9 +156,10 @@ class Pre:
         count = 0
         for sentence in vocab_v0.values():
             for word in sentence:
-                if wordVocab[word] == None:
+                if word not in wordVocab.keys():
                     wordVocab[word] = count
                     count = count + 1
+
         return wordVocab
 
 

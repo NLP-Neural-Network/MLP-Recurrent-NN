@@ -74,9 +74,10 @@ class Pre:
     # Method that receives list of tagged sentences and iterates through them to pass them into a dictionary.
     # Brown_mapping and tree_mapping equals the map of sentences:tags
     @staticmethod
-    def getCorpusTags(tagged_corpus):
-        transformed_vocab = {}
+    def dataSegmentation(tagged_corpus):
         keyWords = []
+        xMatrix = []
+        yMatrix = []
         for key in wordVocab.keys():
             keyWords.append(key)
 
@@ -84,24 +85,13 @@ class Pre:
             sentence = []
             tags = []
             for word in sent:
-                sentence.append(wordVocab[word[0]])
+                sentence.append(int(wordVocab[word[0]]))
                 tags.append(tag_mapping[word[1]])
 
-            transformed_vocab[str(sentence)] = np.asarray(tags)
+            yMatrix.append(tags)
+            xMatrix.append(sentence)
 
-        return transformed_vocab
-
-    # Iterates through keys and values to save them into a list and return numpy arrays.
-    @staticmethod
-    def xySegmentation():
-        # Array to save the lists produced on the next for loop
-        sentences = []
-        labels = []
-        for sentence, label in zip(vocab_v0.keys(), vocab_v0.values()):
-            sentences.append(sentence)
-            labels.append(label)
-
-        return np.asarray(sentences), np.asarray(labels)
+        return np.asarray(xMatrix), np.asarray(yMatrix)
 
     # Function that takes the labels variables with integers and iterates through  to
     # hot encode them and return the transformed data
@@ -109,12 +99,13 @@ class Pre:
     def labelWordEncoder():
         all_tags = set([tag for sentence in brown.tagged_sents(tagset='universal') for _, tag in sentence])
         one_hot_labels = to_categorical([0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11], num_classes=12)
-        keys = list(tag_mapping.keys())
         # Iterate through all the tags to do an int mapping
         c = 0
         for tag in all_tags:
             tag_mapping[tag] = c
             c += 1
+
+        keys = list(tag_mapping.keys())
         c = 0
         for value in tag_mapping.values():
             tag_mapping[keys[c]] = one_hot_labels[value]
@@ -140,36 +131,20 @@ wordVocab = {}
 tag_mapping = {}
 Pre.parse_Questions(brown)
 Pre.labelWordEncoder()
-brownTags = dllist(brown.tagged_sents(tagset='universal'))
-vocab_v0 = Pre.getCorpusTags(brownTags)
-xTrain, yTrain = Pre.xySegmentation()
+brown_tagsents = dllist(brown.tagged_sents(tagset='universal'))
+xTrain, yTrain = Pre.dataSegmentation(brown_tagsents)
+
 
 ############################################              MODEL                    ########################################################################
+# Data Partition
 x_reduced = xTrain[:15000]
 y_reduced = xTrain[:15000]
 print(xTrain.shape, yTrain.shape)
-dataset1 = tf.data.Dataset.from_tensor_slices((x_reduced, y_reduced))
 
+# Padding Vectorized Data Set
 x_train = tf.keras.preprocessing.sequence.pad_sequences(x_reduced, padding='post')
 y_train = tf.keras.preprocessing.sequence.pad_sequences(y_reduced, padding='post')
 print(y_train.shape, x_train.shape)
-asd = [i for i in range(0, 56156)]
-input = Input(shape=(53908,), dtype='int32')
-embed = Embedding(output_dim=52, input_dim=53908)(asd)
-
-data_gen = tf.keras.preprocessing.sequence.TimeseriesGenerator(x_train, y_train,
-                                                               length=10, sampling_rate=20,
-                                                               batch_size=100)
-# Data Partition
-# Padding Vectorized Data Set
-
-xTrain.put
-x_train = tf.keras.preprocessing.sequence.pad_sequences(xTrain[int(xTrain.size * .70):], padding='post')
-x_test = tf.keras.preprocessing.sequence.pad_sequences(xTrain[:int(len(xTrain) * .30)], padding='post')
-y_train = tf.keras.preprocessing.sequence.pad_sequences(yTrain[int(len(yTrain) * .70):], padding='post')
-y_test = tf.keras.preprocessing.sequence.pad_sequences(yTrain[:int(len(xTrain) * .30)], padding='post')
-
-# print(y_test.shape, y_train.shape, y_train.itemsize)
 
 model = models.Sequential()
 model.add(layers.Dense(100, activation='relu', input_shape=(48851, 9000,)))

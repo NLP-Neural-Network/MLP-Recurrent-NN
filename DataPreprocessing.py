@@ -146,16 +146,15 @@ x_train = x_train[:30000]
 y_train = y_train[:30000]
 
 print(y_train.shape, x_train.shape)
-
+vocab_size = len(wordVocab.keys())
 model = models.Sequential()
-
-model.add(layers.Dense(180, input_shape=(180,), activation='relu'))
+model.add(layers.Embedding(input_dim=vocab_size+1, input_length=180, output_dim=100, mask_zero=True))
+model.add(layers.Dense(100, activation='relu'))
 model.add(layers.Dense(12, activation='softmax', ))
-# model.add(layers.LSTM(161, activation='sigmoid'))
-
 model.compile(optimizer='rmsprop', loss='categorical_crossentropy', metrics=['accuracy'])
 
-history = model.fit(x_train, y_train.take(179, 1), epochs=5, batch_size=512, validation_data=(x_validation, y_validation.take(179, 1)))
+history = model.fit(x_train, y_train, epochs=20, batch_size=512,
+                    validation_data=(x_validation, y_validation))
 
 loss = history.history['loss']
 val_loss = history.history['val_loss']

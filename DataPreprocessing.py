@@ -139,23 +139,23 @@ xTrain, yTrain = Pre.dataSegmentation(brown_tagsents)
 # Padding Vectorized Data Set
 x_train = tf.keras.preprocessing.sequence.pad_sequences(xTrain[:40000], padding='post')
 y_train = tf.keras.preprocessing.sequence.pad_sequences(yTrain[:40000], padding='post')
-x_train = np.dstack((x_train[:30000], y_train[:30000]))
+
+x_validation = x_train[30000:]
+y_validation = y_train[30000:]
+x_train = x_train[:30000]
+y_train = y_train[:30000]
 
 print(y_train.shape, x_train.shape)
 
 model = models.Sequential()
-# model.add(layers.Embedding(input_shape=(161,))
-model.add(layers.Dense(180, input_shape=(180, 13), activation='relu'))
 
-# lstm_x = LSTM(100)(x_train)
-# model.add(layers.LSTM(1, activation='relu'))
-model.add(layers.Dense(13, activation='softmax', ))
+model.add(layers.Dense(180, input_shape=(180,), activation='relu'))
+model.add(layers.Dense(12, activation='softmax', ))
 # model.add(layers.LSTM(161, activation='sigmoid'))
 
 model.compile(optimizer='rmsprop', loss='categorical_crossentropy', metrics=['accuracy'])
 
-history = model.fit(x_train, one_hot_labels, epochs=5, batch_size=512, validation_data=(x_train,
-                                                                                        one_hot_labels))
+history = model.fit(x_train, y_train.take(179, 1), epochs=5, batch_size=512, validation_data=(x_validation, y_validation.take(179, 1)))
 
 loss = history.history['loss']
 val_loss = history.history['val_loss']
@@ -167,3 +167,5 @@ plt.title('Training and validation loss')
 plt.xlabel('Epochs')
 plt.ylabel('Loss')
 plt.legend()
+
+plt.show()

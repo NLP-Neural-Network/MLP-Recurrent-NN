@@ -9,7 +9,7 @@ import tensorflow as tf
 import numpy as np
 from tensorflow.keras.utils import to_categorical
 from tensorflow.keras import models, layers
-from tensorflow.keras.layers import LSTM, Dense, Embedding, Input
+from tensorflow.keras.layers import LSTM, Dense, Embedding, Input, Reshape
 import matplotlib.pyplot as plt
 from tensorflow.keras.preprocessing.sequence import TimeseriesGenerator
 
@@ -125,7 +125,7 @@ class Pre:
 nltk.download('brown')
 nltk.download('punkt')
 nltk.download('universal_tagset')
-
+one_hot_labels = None
 vocab_v0 = {}
 wordVocab = {}
 tag_mapping = {}
@@ -134,29 +134,28 @@ Pre.labelWordEncoder()
 brown_tagsents = dllist(brown.tagged_sents(tagset='universal'))
 xTrain, yTrain = Pre.dataSegmentation(brown_tagsents)
 
-
 ############################################              MODEL                    ########################################################################
 # Data Partition
-x_reduced = xTrain[:15000]
-y_reduced = xTrain[:15000]
-print(xTrain.shape, yTrain.shape)
-
 # Padding Vectorized Data Set
-x_train = tf.keras.preprocessing.sequence.pad_sequences(x_reduced, padding='post')
-y_train = tf.keras.preprocessing.sequence.pad_sequences(y_reduced, padding='post')
+x_train = tf.keras.preprocessing.sequence.pad_sequences(xTrain[:40000], padding='post')
+y_train = tf.keras.preprocessing.sequence.pad_sequences(yTrain[:40000], padding='post')
+x_train = np.dstack((x_train[:30000], y_train[:30000]))
+
 print(y_train.shape, x_train.shape)
 
 model = models.Sequential()
-model.add(layers.Dense(100, activation='relu', input_shape=(48851, 9000,)))
+# model.add(layers.Embedding(input_shape=(161,))
+model.add(layers.Dense(180, input_shape=(180, 13), activation='relu'))
 
-lstm_x = LSTM(100)(x_train)
-# model.add(layers.LSTM(16, activation='relu'))
-model.add(layers.Dense(11, activation='relu'))
-model.add(layers.Dense(11, activation='softmax', ))
+# lstm_x = LSTM(100)(x_train)
+# model.add(layers.LSTM(1, activation='relu'))
+model.add(layers.Dense(13, activation='softmax', ))
+# model.add(layers.LSTM(161, activation='sigmoid'))
 
-model.compile(optimizer='rmsprop', loss='categorical_crossentropy', matrics=['accuracy'])
+model.compile(optimizer='rmsprop', loss='categorical_crossentropy', metrics=['accuracy'])
 
-history = model.fit(x_train, y_train, epochs=20, batch_size=512, validation_data=(x_test, y_test))
+history = model.fit(x_train, one_hot_labels, epochs=5, batch_size=512, validation_data=(x_train,
+                                                                                        one_hot_labels))
 
 loss = history.history['loss']
 val_loss = history.history['val_loss']

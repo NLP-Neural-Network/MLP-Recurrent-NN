@@ -116,6 +116,7 @@ xTrain, yTrain = Pre.dataSegmentation(brown_tagsents)
 ############################################              MODEL                    ########################################################################
 # Data Partition
 # Padding Vectorized Data Set
+<<<<<<< HEAD
 x_data = tf.keras.preprocessing.sequence.pad_sequences(xTrain, padding='post')
 y_data = tf.keras.preprocessing.sequence.pad_sequences(yTrain, padding='post')
 
@@ -127,6 +128,19 @@ y_validation = y_data[50000:]
 x_training.shape
 lol = to_categorical(y_training,)
 lol[0]
+=======
+x_train = tf.keras.preprocessing.sequence.pad_sequences(xTrain[:50000], padding='post')
+y_train = tf.keras.preprocessing.sequence.pad_sequences(yTrain[:50000], padding='post')
+
+
+x_validation = x_train[40000:]
+y_validation = y_train[40000:]
+x_train = x_train[10000:40000]
+y_train = y_train[10000:40000]
+
+test = x_train[:5000]
+testL = y_train[:5000]
+>>>>>>> 00b99f19fcde78e74f1dd7ced025f8c88fdd1c47
 
 vocab_size = len(wordVocab.keys())
 
